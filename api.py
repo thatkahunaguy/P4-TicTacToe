@@ -52,12 +52,13 @@ class GuessANumberApi(remote.Service):
                       http_method='POST')
     def new_game(self, request):
         """Creates new game"""
-        user = User.query(User.name == request.user_name).get()
-        if not user:
+        user_x = User.query(User.name == request.user_name_x).get()
+        user_y = User.query(User.name == request.user_name_y).get()
+        if not user_x or not user_y:
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
         try:
-            game = Game.new_game(user.key, request.min,
+            game = Game.new_game(user_x.key, user_y.key, request.min,
                                  request.max, request.attempts)
         except ValueError:
             raise endpoints.BadRequestException('Maximum must be greater '
@@ -92,7 +93,11 @@ class GuessANumberApi(remote.Service):
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
-
+        # Verify it's the user's turn
+        whose_turn = game.whose_turn.get().name
+        if not (request.user_name == whose_turn):
+            return game.to_form(
+                "Sorry, it is {}'s turn!".format(whose_turn))
         game.attempts_remaining -= 1
         if request.guess == game.target:
             game.end_game(True)
@@ -107,6 +112,11 @@ class GuessANumberApi(remote.Service):
             game.end_game(False)
             return game.to_form(msg + ' Game over!')
         else:
+            # update whose_turn it is
+            if game.whose_turn == game.user_name_x:
+                game.whose_turn = game.user_name_y
+            else:
+                game.whose_turn = game.user_name_x
             game.put()
             return game.to_form(msg)
 

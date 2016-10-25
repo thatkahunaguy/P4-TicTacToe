@@ -20,17 +20,21 @@ class Game(ndb.Model):
     attempts_allowed = ndb.IntegerProperty(required=True)
     attempts_remaining = ndb.IntegerProperty(required=True, default=5)
     game_over = ndb.BooleanProperty(required=True, default=False)
-    user = ndb.KeyProperty(required=True, kind='User')
+    user_name_x = ndb.KeyProperty(required=True, kind='User')
+    user_name_y = ndb.KeyProperty(required=True, kind='User')
+    whose_turn = ndb.KeyProperty(required=True, kind='User')
 
     @classmethod
-    def new_game(cls, user, min, max, attempts):
+    def new_game(cls, user_name_x, user_name_y, min, max, attempts):
         """Creates and returns a new game"""
         if max < min:
             raise ValueError('Maximum must be greater than minimum')
-        game = Game(user=user,
+        game = Game(user_name_x=user_name_x,
+                    user_name_y=user_name_y,
                     target=random.choice(range(1, max + 1)),
                     attempts_allowed=attempts,
                     attempts_remaining=attempts,
+                    whose_turn=user_name_x,
                     game_over=False)
         game.put()
         return game
@@ -39,8 +43,10 @@ class Game(ndb.Model):
         """Returns a GameForm representation of the Game"""
         form = GameForm()
         form.urlsafe_key = self.key.urlsafe()
-        form.user_name = self.user.get().name
+        form.user_name_x = self.user_name_x.get().name
+        form.user_name_y = self.user_name_y.get().name
         form.attempts_remaining = self.attempts_remaining
+        form.whose_turn = self.whose_turn.get().name
         form.game_over = self.game_over
         form.message = message
         return form
@@ -50,8 +56,8 @@ class Game(ndb.Model):
         the player lost."""
         self.game_over = True
         self.put()
-        # Add the game to the score 'board'
-        score = Score(user=self.user, date=date.today(), won=won,
+        # Add the winners score - need to update for 2 players with cats 
+        score = Score(user=self.whose_turn, date=date.today(), won=won,
                       guesses=self.attempts_allowed - self.attempts_remaining)
         score.put()
 
@@ -74,20 +80,24 @@ class GameForm(messages.Message):
     attempts_remaining = messages.IntegerField(2, required=True)
     game_over = messages.BooleanField(3, required=True)
     message = messages.StringField(4, required=True)
-    user_name = messages.StringField(5, required=True)
+    user_name_x = messages.StringField(5, required=True)
+    user_name_y = messages.StringField(6, required=True)
+    whose_turn = messages.StringField(7, required=True)
 
 
 class NewGameForm(messages.Message):
     """Used to create a new game"""
-    user_name = messages.StringField(1, required=True)
-    min = messages.IntegerField(2, default=1)
-    max = messages.IntegerField(3, default=10)
-    attempts = messages.IntegerField(4, default=5)
+    user_name_x = messages.StringField(1, required=True)
+    user_name_y = messages.StringField(2, required=True)
+    min = messages.IntegerField(3, default=1)
+    max = messages.IntegerField(4, default=10)
+    attempts = messages.IntegerField(5, default=5)
 
 
 class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
-    guess = messages.IntegerField(1, required=True)
+    user_name = messages.StringField(1, required=True)
+    guess = messages.IntegerField(2, required=True)
 
 
 class ScoreForm(messages.Message):
