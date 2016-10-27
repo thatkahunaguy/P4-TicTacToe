@@ -51,6 +51,8 @@ class Game(ndb.Model):
         form.message = message
         return form
 
+    # run end game as transactions to ensure all updates occur
+    @ndb.transactional(xg=True)
     def end_game(self, won=False):
         """Ends the game - if won is True, the current player won. - if won is
         False, it was a cats game."""
@@ -62,12 +64,12 @@ class Game(ndb.Model):
             not_turn = self.user_name_x
         cats = not won
         # Add the winners score or cats score
-        score = Score(user=self.whose_turn, opponent=not_turn,
+        score = Score(parent=self.whose_turn, opponent=not_turn,
                       date=datetime.today(), won=won, cats=cats,
                       guesses=self.attempts_allowed - self.attempts_remaining)
         score.put()
         # Add the losers score or cats score
-        score = Score(user=not_turn, opponent=self.whose_turn,
+        score = Score(parent=not_turn, opponent=self.whose_turn,
                       date=datetime.today(), won= False, cats=cats,
                       guesses=self.attempts_allowed - self.attempts_remaining)
         score.put()
@@ -75,7 +77,7 @@ class Game(ndb.Model):
 
 class Score(ndb.Model):
     """Score object"""
-    user = ndb.KeyProperty(required=True, kind='User')
+    #user = ndb.KeyProperty(required=True, kind='User')
     opponent = ndb.KeyProperty(required=True, kind='User')
     date = ndb.DateTimeProperty(required=True)
     won = ndb.BooleanProperty(required=True)
@@ -83,8 +85,10 @@ class Score(ndb.Model):
     guesses = ndb.IntegerProperty(required=True)
 
     def to_form(self):
-        return ScoreForm(user_name=self.user.get().name, cats=self.cats,
-                         opponent_name=self.opponent.get().name, won=self.won,
+        return ScoreForm(user_name=self.key.parent().get().name,
+                         # user_name=self.parent_key().get().name,
+                         opponent_name=self.opponent.get().name,
+                         won=self.won, cats=self.cats,
                          date=str(self.date), guesses=self.guesses)
 
 
