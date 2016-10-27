@@ -3,7 +3,7 @@ entities used by the Game. Because these classes are also regular Python
 classes they can include methods (such as 'to_form' and 'new_game')."""
 
 import random
-from datetime import date
+from datetime import datetime
 from protorpc import messages
 from google.appengine.ext import ndb
 
@@ -52,12 +52,23 @@ class Game(ndb.Model):
         return form
 
     def end_game(self, won=False):
-        """Ends the game - if won is True, the player won. - if won is False,
-        the player lost."""
+        """Ends the game - if won is True, the current player won. - if won is
+        False, it was a cats game."""
         self.game_over = True
         self.put()
-        # Add the winners score - need to update for 2 players with cats 
-        score = Score(user=self.whose_turn, date=date.today(), won=won,
+        if (self.whose_turn == self.user_name_x):
+            not_turn = self.user_name_y
+        else:
+            not_turn = self.user_name_x
+        cats = not won
+        # Add the winners score or cats score
+        score = Score(user=self.whose_turn, opponent=not_turn,
+                      date=datetime.today(), won=won, cats=cats,
+                      guesses=self.attempts_allowed - self.attempts_remaining)
+        score.put()
+        # Add the losers score or cats score
+        score = Score(user=not_turn, opponent=self.whose_turn,
+                      date=datetime.today(), won= False, cats=cats,
                       guesses=self.attempts_allowed - self.attempts_remaining)
         score.put()
 
@@ -65,12 +76,15 @@ class Game(ndb.Model):
 class Score(ndb.Model):
     """Score object"""
     user = ndb.KeyProperty(required=True, kind='User')
-    date = ndb.DateProperty(required=True)
+    opponent = ndb.KeyProperty(required=True, kind='User')
+    date = ndb.DateTimeProperty(required=True)
     won = ndb.BooleanProperty(required=True)
+    cats = ndb.BooleanProperty(required=True)
     guesses = ndb.IntegerProperty(required=True)
 
     def to_form(self):
-        return ScoreForm(user_name=self.user.get().name, won=self.won,
+        return ScoreForm(user_name=self.user.get().name, cats=self.cats,
+                         opponent_name=self.opponent.get().name, won=self.won,
                          date=str(self.date), guesses=self.guesses)
 
 
@@ -103,9 +117,11 @@ class MakeMoveForm(messages.Message):
 class ScoreForm(messages.Message):
     """ScoreForm for outbound Score information"""
     user_name = messages.StringField(1, required=True)
-    date = messages.StringField(2, required=True)
-    won = messages.BooleanField(3, required=True)
-    guesses = messages.IntegerField(4, required=True)
+    opponent_name = messages.StringField(2, required=True)
+    date = messages.StringField(3, required=True)
+    won = messages.BooleanField(4, required=True)
+    cats = messages.BooleanField(5, required=True)
+    guesses = messages.IntegerField(6, required=True)
 
 
 class ScoreForms(messages.Message):
