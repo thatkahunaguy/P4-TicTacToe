@@ -11,29 +11,36 @@ from google.appengine.ext import ndb
 class User(ndb.Model):
     """User profile"""
     name = ndb.StringProperty(required=True)
-    email =ndb.StringProperty()
+    email = ndb.StringProperty()
 
+class Move(ndb.Model):
+    """Move object"""
+    kind = ndb.StringProperty(required=True, default="X", choices=["X", "O"])
+    # chore: add a validator to x & y to ensure they are between 0 & 2
+    x = ndb.IntegerProperty(required=True)
+    y = ndb.IntegerProperty(required=True)
 
 class Game(ndb.Model):
     """Game object"""
-    target = ndb.IntegerProperty(required=True)
-    attempts_allowed = ndb.IntegerProperty(required=True)
-    attempts_remaining = ndb.IntegerProperty(required=True, default=5)
+    # target = ndb.IntegerProperty(required=True)
+    number_of_moves = ndb.IntegerProperty(required=True, default = 0)
+    board = ndb.StringProperty(required=True, default = "000000000")
+    # attempts_remaining = ndb.IntegerProperty(required=True, default=5)
     game_over = ndb.BooleanProperty(required=True, default=False)
     user_name_x = ndb.KeyProperty(required=True, kind='User')
-    user_name_y = ndb.KeyProperty(required=True, kind='User')
+    user_name_o = ndb.KeyProperty(required=True, kind='User')
     whose_turn = ndb.KeyProperty(required=True, kind='User')
 
     @classmethod
-    def new_game(cls, user_name_x, user_name_y, min, max, attempts):
+    def new_game(cls, user_name_x, user_name_o, min, max, attempts):
         """Creates and returns a new game"""
         if max < min:
             raise ValueError('Maximum must be greater than minimum')
         game = Game(user_name_x=user_name_x,
-                    user_name_y=user_name_y,
-                    target=random.choice(range(1, max + 1)),
-                    attempts_allowed=attempts,
-                    attempts_remaining=attempts,
+                    user_name_o=user_name_o,
+                    # target=random.choice(range(1, max + 1)),
+                    # attempts_allowed=attempts,
+                    number_of_moves=0,
                     whose_turn=user_name_x,
                     game_over=False)
         game.put()
@@ -44,11 +51,13 @@ class Game(ndb.Model):
         form = GameForm()
         form.urlsafe_key = self.key.urlsafe()
         form.user_name_x = self.user_name_x.get().name
-        form.user_name_y = self.user_name_y.get().name
-        form.attempts_remaining = self.attempts_remaining
+        form.user_name_o = self.user_name_o.get().name
+#        form.attempts_remaining = self.attempts_remaining
         form.whose_turn = self.whose_turn.get().name
         form.game_over = self.game_over
         form.message = message
+        form.board = self.board
+        form.number_of_moves = self.number_of_moves
         return form
 
     # run end game as transactions to ensure all updates occur
@@ -59,19 +68,19 @@ class Game(ndb.Model):
         self.game_over = True
         self.put()
         if (self.whose_turn == self.user_name_x):
-            not_turn = self.user_name_y
+            not_turn = self.user_name_o
         else:
             not_turn = self.user_name_x
         cats = not won
         # Add the winners score or cats score
         score = Score(parent=self.whose_turn, opponent=not_turn,
                       date=datetime.today(), won=won, cats=cats,
-                      guesses=self.attempts_allowed - self.attempts_remaining)
+                      moves=self.number_of_moves)
         score.put()
         # Add the losers score or cats score
         score = Score(parent=not_turn, opponent=self.whose_turn,
                       date=datetime.today(), won= False, cats=cats,
-                      guesses=self.attempts_allowed - self.attempts_remaining)
+                      moves=self.number_of_moves)
         score.put()
 
 
@@ -82,31 +91,32 @@ class Score(ndb.Model):
     date = ndb.DateTimeProperty(required=True)
     won = ndb.BooleanProperty(required=True)
     cats = ndb.BooleanProperty(required=True)
-    guesses = ndb.IntegerProperty(required=True)
+    moves = ndb.IntegerProperty(required=True)
 
     def to_form(self):
         return ScoreForm(user_name=self.key.parent().get().name,
                          # user_name=self.parent_key().get().name,
                          opponent_name=self.opponent.get().name,
                          won=self.won, cats=self.cats,
-                         date=str(self.date), guesses=self.guesses)
+                         date=str(self.date), moves=self.moves)
 
 
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""
     urlsafe_key = messages.StringField(1, required=True)
-    attempts_remaining = messages.IntegerField(2, required=True)
+    number_of_moves = messages.IntegerField(2, required=True)
     game_over = messages.BooleanField(3, required=True)
     message = messages.StringField(4, required=True)
     user_name_x = messages.StringField(5, required=True)
-    user_name_y = messages.StringField(6, required=True)
+    user_name_o = messages.StringField(6, required=True)
     whose_turn = messages.StringField(7, required=True)
+    board = messages.StringField(8, required=True)
 
 
 class NewGameForm(messages.Message):
     """Used to create a new game"""
     user_name_x = messages.StringField(1, required=True)
-    user_name_y = messages.StringField(2, required=True)
+    user_name_o = messages.StringField(2, required=True)
     min = messages.IntegerField(3, default=1)
     max = messages.IntegerField(4, default=10)
     attempts = messages.IntegerField(5, default=5)
@@ -115,7 +125,8 @@ class NewGameForm(messages.Message):
 class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
     user_name = messages.StringField(1, required=True)
-    guess = messages.IntegerField(2, required=True)
+    move_x = messages.IntegerField(2, required=True)
+    move_y = messages.IntegerField(3, required=True)
 
 
 class ScoreForm(messages.Message):
@@ -125,7 +136,7 @@ class ScoreForm(messages.Message):
     date = messages.StringField(3, required=True)
     won = messages.BooleanField(4, required=True)
     cats = messages.BooleanField(5, required=True)
-    guesses = messages.IntegerField(6, required=True)
+    moves = messages.IntegerField(6, required=True)
 
 
 class ScoreForms(messages.Message):

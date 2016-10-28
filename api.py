@@ -11,7 +11,7 @@ from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 
-from models import User, Game, Score
+from models import User, Game, Score, Move
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
     ScoreForms
 from utils import get_by_urlsafe
@@ -28,8 +28,9 @@ USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
 
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
-@endpoints.api(name='guess_a_number', version='v1')
-class GuessANumberApi(remote.Service):
+
+@endpoints.api(name='tictactoe', version='v1')
+class TicTacToeApi(remote.Service):
     """Game API"""
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=StringMessage,
@@ -54,12 +55,12 @@ class GuessANumberApi(remote.Service):
     def new_game(self, request):
         """Creates new game"""
         user_x = User.query(User.name == request.user_name_x).get()
-        user_y = User.query(User.name == request.user_name_y).get()
-        if not user_x or not user_y:
+        user_o = User.query(User.name == request.user_name_o).get()
+        if not user_x or not user_o:
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
         try:
-            game = Game.new_game(user_x.key, user_y.key, request.min,
+            game = Game.new_game(user_x.key, user_o.key, request.min,
                                  request.max, request.attempts)
         except ValueError:
             raise endpoints.BadRequestException('Maximum must be greater '
@@ -68,8 +69,8 @@ class GuessANumberApi(remote.Service):
         # Use a task queue to update the average attempts remaining.
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
-        taskqueue.add(url='/tasks/cache_average_attempts')
-        return game.to_form('Good luck playing Guess a Number!')
+        # taskqueue.add(url='/tasks/cache_average_attempts')
+        return game.to_form('Good luck playing Tic Tac Toe!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameForm,
@@ -92,8 +93,13 @@ class GuessANumberApi(remote.Service):
     def make_move(self, request):
         """Makes a move. Returns a game state with message"""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if game.whose_turn == game.user_name_x:
+            kind = "X"
+        else:
+            kind = "O"
+        move = Move(kind=kind, x=request.move_x, y=request.move_y)
         return make_move_2(game=game, player=request.user_name,
-                           guess=request.guess)
+                           move=move)
         # if game.game_over:
         #     return game.to_form('Game already over!')
         # # Verify it's the user's turn
@@ -117,7 +123,7 @@ class GuessANumberApi(remote.Service):
         # else:
         #     # update whose_turn it is
         #     if game.whose_turn == game.user_name_x:
-        #         game.whose_turn = game.user_name_y
+        #         game.whose_turn = game.user_name_o
         #     else:
         #         game.whose_turn = game.user_name_x
         #     game.put()
@@ -146,25 +152,25 @@ class GuessANumberApi(remote.Service):
         scores = Score.query(ancestor=user.key)
         return ScoreForms(items=[score.to_form() for score in scores])
 
-    @endpoints.method(response_message=StringMessage,
-                      path='games/average_attempts',
-                      name='get_average_attempts_remaining',
-                      http_method='GET')
-    def get_average_attempts(self, request):
-        """Get the cached average moves remaining"""
-        return StringMessage(message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
+    # @endpoints.method(response_message=StringMessage,
+    #                   path='games/average_attempts',
+    #                   name='get_average_attempts_remaining',
+    #                   http_method='GET')
+    # def get_average_attempts(self, request):
+    #     """Get the cached average moves remaining"""
+    #     return StringMessage(message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
+    #
+    # @staticmethod
+    # def _cache_average_attempts():
+    #     """Populates memcache with the average moves remaining of Games"""
+    #     games = Game.query(Game.game_over == False).fetch()
+    #     if games:
+    #         count = len(games)
+    #         total_attempts_remaining = sum([game.attempts_remaining
+    #                                     for game in games])
+    #         average = float(total_attempts_remaining)/count
+            # memcache.set(MEMCACHE_MOVES_REMAINING,
+            #              'The average moves remaining is {:.2f}'.format(average))
 
-    @staticmethod
-    def _cache_average_attempts():
-        """Populates memcache with the average moves remaining of Games"""
-        games = Game.query(Game.game_over == False).fetch()
-        if games:
-            count = len(games)
-            total_attempts_remaining = sum([game.attempts_remaining
-                                        for game in games])
-            average = float(total_attempts_remaining)/count
-            memcache.set(MEMCACHE_MOVES_REMAINING,
-                         'The average moves remaining is {:.2f}'.format(average))
 
-
-api = endpoints.api_server([GuessANumberApi])
+api = endpoints.api_server([TicTacToeApi])
