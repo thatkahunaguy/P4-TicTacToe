@@ -20,6 +20,9 @@ class Move(ndb.Model):
     x = ndb.IntegerProperty(required=True)
     y = ndb.IntegerProperty(required=True)
 
+    def to_form(self):
+        return MoveForm(kind=self.kind, x=self.x, y=self.y)
+
 class Game(ndb.Model):
     """Game object"""
     # target = ndb.IntegerProperty(required=True)
@@ -95,7 +98,6 @@ class Score(ndb.Model):
 
     def to_form(self):
         return ScoreForm(user_name=self.key.parent().get().name,
-                         # user_name=self.parent_key().get().name,
                          opponent_name=self.opponent.get().name,
                          won=self.won, cats=self.cats,
                          date=str(self.date), moves=self.moves)
@@ -142,6 +144,16 @@ class ScoreForm(messages.Message):
 class ScoreForms(messages.Message):
     """Return multiple ScoreForms"""
     items = messages.MessageField(ScoreForm, 1, repeated=True)
+
+class MoveForm(messages.Message):
+    """MoveForm for outbound Move information"""
+    kind = messages.StringField(1, required=True)
+    x = messages.IntegerField(2, required=True)
+    y = messages.IntegerField(3, required=True)
+
+class MoveForms(messages.Message):
+    """Return multiple MoveForms"""
+    items = messages.MessageField(MoveForm, 1, repeated=True)
 
 class GameForms(messages.Message):
     """Return multiple GameForms"""

@@ -14,7 +14,7 @@ from google.appengine.ext import ndb
 
 from models import User, Game, Score, Move
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, GameForms
+    ScoreForms, GameForms, MoveForm, MoveForms
 from utils import get_by_urlsafe
 from tic_tac_toe import make_move_2
 
@@ -98,37 +98,22 @@ class TicTacToeApi(remote.Service):
             kind = "X"
         else:
             kind = "O"
-        move = Move(kind=kind, x=request.move_x, y=request.move_y)
+        move = Move(parent=game.key, kind=kind,
+                    x=request.move_x, y=request.move_y)
+        move.put()
         return make_move_2(game=game, player=request.user_name,
                            move=move)
-        # if game.game_over:
-        #     return game.to_form('Game already over!')
-        # # Verify it's the user's turn
-        # whose_turn = game.whose_turn.get().name
-        # if not (request.user_name == whose_turn):
-        #     return game.to_form(
-        #         "Sorry, it is {}'s turn!".format(whose_turn))
-        # game.attempts_remaining -= 1
-        # if request.guess == game.target:
-        #     game.end_game(True)
-        #     return game.to_form('You win!')
-        #
-        # if request.guess < game.target:
-        #     msg = 'Too low!'
-        # else:
-        #     msg = 'Too high!'
-        #
-        # if game.attempts_remaining < 1:
-        #     game.end_game(False)
-        #     return game.to_form(msg + ' Game over!')
-        # else:
-        #     # update whose_turn it is
-        #     if game.whose_turn == game.user_name_x:
-        #         game.whose_turn = game.user_name_o
-        #     else:
-        #         game.whose_turn = game.user_name_x
-        #     game.put()
-        #     return game.to_form(msg)
+
+    @endpoints.method(request_message=GET_GAME_REQUEST,
+                      response_message=MoveForms,
+                      path='game/moves/{urlsafe_game_key}',
+                      name='get_moves',
+                      http_method='GET')
+    def get_moves(self, request):
+        """Gets all moves for a particular game"""
+        game_key = ndb.Key(urlsafe=request.urlsafe_game_key)
+        moves = Move.query(ancestor=game_key)
+        return MoveForms(items=[move.to_form() for move in moves])
 
     @endpoints.method(response_message=ScoreForms,
                       path='scores',
@@ -165,6 +150,10 @@ class TicTacToeApi(remote.Service):
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
         user = user.key
+        # chore: figure out why I don't have to call fetch on they
+        # queries for games and scores above - thought this just
+        # built a query object and didn't actually query the database
+        # without .fetch() or .get()
         games = Game.query(Game.game_over == False,
                            ndb.OR(Game.user_name_x == user,
                                   Game.user_name_o == user))
