@@ -10,10 +10,11 @@ import endpoints
 from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
+from google.appengine.ext import ndb
 
 from models import User, Game, Score, Move
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms
+    ScoreForms, GameForms
 from utils import get_by_urlsafe
 from tic_tac_toe import make_move_2
 
@@ -152,6 +153,22 @@ class TicTacToeApi(remote.Service):
         scores = Score.query(ancestor=user.key)
         return ScoreForms(items=[score.to_form() for score in scores])
 
+    @endpoints.method(request_message=USER_REQUEST,
+                      response_message=GameForms,
+                      path='games/user/{user_name}',
+                      name='get_user_games',
+                      http_method='GET')
+    def get_user_games(self, request):
+        """Returns all of an individual User's active games"""
+        user = User.query(User.name == request.user_name).get()
+        if not user:
+            raise endpoints.NotFoundException(
+                    'A User with that name does not exist!')
+        user = user.key
+        games = Game.query(Game.game_over == False,
+                           ndb.OR(Game.user_name_x == user,
+                                  Game.user_name_o == user))
+        return GameForms(items=[game.to_form("active game") for game in games])
     # @endpoints.method(response_message=StringMessage,
     #                   path='games/average_attempts',
     #                   name='get_average_attempts_remaining',
