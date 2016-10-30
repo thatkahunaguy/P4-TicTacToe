@@ -99,8 +99,8 @@ class TicTacToeApi(remote.Service):
         else:
             kind = "O"
         move = Move(parent=game.key, kind=kind,
+                    number=game.number_of_moves + 1,
                     x=request.move_x, y=request.move_y)
-        move.put()
         return make_move_2(game=game, player=request.user_name,
                            move=move)
 
@@ -112,7 +112,7 @@ class TicTacToeApi(remote.Service):
     def get_moves(self, request):
         """Gets all moves for a particular game"""
         game_key = ndb.Key(urlsafe=request.urlsafe_game_key)
-        moves = Move.query(ancestor=game_key)
+        moves = Move.query(ancestor=game_key).order(Move.number)
         return MoveForms(items=[move.to_form() for move in moves])
 
     @endpoints.method(response_message=ScoreForms,

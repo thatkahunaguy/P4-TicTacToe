@@ -19,9 +19,11 @@ class Move(ndb.Model):
     # chore: add a validator to x & y to ensure they are between 0 & 2
     x = ndb.IntegerProperty(required=True)
     y = ndb.IntegerProperty(required=True)
+    number = ndb.IntegerProperty(required=True)
 
     def to_form(self):
-        return MoveForm(kind=self.kind, x=self.x, y=self.y)
+        return MoveForm(kind=self.kind, x=self.x, y=self.y,
+                        number = self.number)
 
 class Game(ndb.Model):
     """Game object"""
@@ -150,6 +152,7 @@ class MoveForm(messages.Message):
     kind = messages.StringField(1, required=True)
     x = messages.IntegerField(2, required=True)
     y = messages.IntegerField(3, required=True)
+    number = messages.IntegerField(4, required=True)
 
 class MoveForms(messages.Message):
     """Return multiple MoveForms"""

@@ -24,6 +24,8 @@ def make_move_2(game, player, move):
         # there is a already a move at this position, don't update game
         return game.to_form("""Sorry, position {}, {} is already filled!"""
                             .format(move.x, move.y))
+    # commit the move to the database only after we know its valid
+    move.put()
     # only check for game end if at least 5 moves have been made
     if game.number_of_moves > 4:
         if game_over(game, move):
