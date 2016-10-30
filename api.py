@@ -26,6 +26,9 @@ MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
     urlsafe_game_key=messages.StringField(1),)
 USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
                                            email=messages.StringField(2))
+CANCEL_REQUEST = endpoints.ResourceContainer(
+    user_name=messages.StringField(1),
+    urlsafe_game_key=messages.StringField(2))
 
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
@@ -153,11 +156,38 @@ class TicTacToeApi(remote.Service):
         # chore: figure out why I don't have to call fetch on they
         # queries for games and scores above - thought this just
         # built a query object and didn't actually query the database
-        # without .fetch() or .get()
+        # without .fetch() or .get() - see the link below...when used
+        # as an iterator the query instance returns results when it is
+        # iterated over
+        # http://stackoverflow.com/questions/15410609/google-app-engine-ndb-need-to-fetch-after-query
         games = Game.query(Game.game_over == False,
                            ndb.OR(Game.user_name_x == user,
                                   Game.user_name_o == user))
         return GameForms(items=[game.to_form("active game") for game in games])
+
+    @endpoints.method(request_message=CANCEL_REQUEST,
+                      response_message=GameForm,
+                      path='game/cancel/{urlsafe_game_key}',
+                      name='cancel_game',
+                      http_method='PUT')
+    def cancel_game(self, request):
+        """Cancels a game if not finished and user is a game member"""
+        user = User.query(User.name == request.user_name).get()
+        if not user:
+            raise endpoints.NotFoundException(
+                    'A User with that name does not exist!')
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if user.key == game.user_name_x or user.key == game.user_name_o:
+            if not game.game_over:
+                game.key.delete()
+                return game.to_form("Game cancelled!")
+            else:
+                return game.to_form("Sorry, this game is fnished!")
+        else:
+            return game.to_form(
+                "Sorry, {} can't cancel this game".format(user.name))
+
+
     # @endpoints.method(response_message=StringMessage,
     #                   path='games/average_attempts',
     #                   name='get_average_attempts_remaining',
