@@ -18,7 +18,7 @@ from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
     ScoreForms, GameForms, MoveForm, MoveForms, RankingForm, RankingForms,\
     RankingRequestForm
 from utils import get_by_urlsafe
-from tic_tac_toe import make_move_2
+from tic_tac_toe import make_move_2, rank_them
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
 GET_GAME_REQUEST = endpoints.ResourceContainer(
@@ -191,42 +191,17 @@ class TicTacToeApi(remote.Service):
     @endpoints.method(request_message=RankingRequestForm,
                       response_message=RankingForms,
                       path='ranking',
-                      name='get_rankings',
+                      name='get_user_rankings',
                       http_method='GET')
-    def get_rankings(self, request):
+    def get_user_rankings(self, request):
         """Returns rankings of players, all or up to number_of_results"""
         users = User.query()
         if not users:
             raise endpoints.NotFoundException(
                     'No users in the database yet!')
         rankings = []
-        for user in users:
-            scores = Score.query(ancestor=user.key)
-            wins = losses = cats = moves = 0.0
-            for score in scores:
-                # chore: might not want to include moves in losses in the
-                # rankings algorithm
-                moves += score.moves
-                if score.won:
-                    wins += 1.0
-                elif score.cats:
-                    cats += 1.0
-                else:
-                    losses += 1.0
-            games = wins + cats + losses
-            rating = Ranking(user=user.name,
-                             win_percent=wins/games,
-                             cats_percent=cats/games,
-                             avg_moves=moves/games)
-            rankings.append(rating)
-        # sorts are stable(order from initial sort retained unless changed
-        # by a later sort) so execute the last sort criteria first
-        rankings = sorted(rankings, key=attrgetter('avg_moves'))
-        rankings = sorted(rankings, key=attrgetter('win_percent',
-                                                   'cats_percent'),
-                                                   reverse=True)
-        if request.number_of_results:
-            rankings = rankings[:request.number_of_results]
+        rankings = rank_them(users=users,
+                            number_of_results=request.number_of_results)
         return RankingForms(items=[ranking.to_form() for ranking in rankings])
 
     # @endpoints.method(response_message=StringMessage,

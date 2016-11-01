@@ -1,5 +1,7 @@
 """Tic Tac Toe game logic"""
-from models import User, Game, Score
+from operator import attrgetter
+
+from models import User, Game, Score, Ranking
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
     ScoreForms
 
@@ -80,3 +82,34 @@ def game_over(game, move):
         return True
     else:
         return False
+
+def rank_them(users, number_of_results):
+    rankings = []
+    for user in users:
+        scores = Score.query(ancestor=user.key)
+        wins = losses = cats = moves = 0.0
+        for score in scores:
+            # chore: might not want to include moves in losses in the
+            # rankings algorithm
+            moves += score.moves
+            if score.won:
+                wins += 1.0
+            elif score.cats:
+                cats += 1.0
+            else:
+                losses += 1.0
+        games = wins + cats + losses
+        rating = Ranking(user=user.name,
+                         win_percent=wins/games,
+                         cats_percent=cats/games,
+                         avg_moves=moves/games)
+        rankings.append(rating)
+    # sorts are stable(order from initial sort retained unless changed
+    # by a later sort) so execute the last sort criteria first
+    rankings = sorted(rankings, key=attrgetter('avg_moves'))
+    rankings = sorted(rankings, key=attrgetter('win_percent',
+                                               'cats_percent'),
+                                               reverse=True)
+    if number_of_results:
+        rankings = rankings[:number_of_results]
+    return rankings
