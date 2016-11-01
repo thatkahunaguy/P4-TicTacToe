@@ -15,7 +15,8 @@ from operator import attrgetter
 
 from models import User, Game, Score, Move, Ranking
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, GameForms, MoveForm, MoveForms, RankingForm, RankingForms
+    ScoreForms, GameForms, MoveForm, MoveForms, RankingForm, RankingForms,\
+    RankingRequestForm
 from utils import get_by_urlsafe
 from tic_tac_toe import make_move_2
 
@@ -187,7 +188,8 @@ class TicTacToeApi(remote.Service):
             return game.to_form(
                 "Sorry, {} can't cancel this game".format(user.name))
 
-    @endpoints.method(response_message=RankingForms,
+    @endpoints.method(request_message=RankingRequestForm,
+                      response_message=RankingForms,
                       path='ranking',
                       name='get_rankings',
                       http_method='GET')
@@ -223,6 +225,8 @@ class TicTacToeApi(remote.Service):
         rankings = sorted(rankings, key=attrgetter('win_percent',
                                                    'cats_percent'),
                                                    reverse=True)
+        if request.number_of_results:
+            rankings = rankings[:request.number_of_results]
         return RankingForms(items=[ranking.to_form() for ranking in rankings])
 
     # @endpoints.method(response_message=StringMessage,

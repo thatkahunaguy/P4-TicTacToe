@@ -169,8 +169,12 @@ class GameForms(messages.Message):
     """Return multiple GameForms"""
     items = messages.MessageField(GameForm, 1, repeated=True)
 
+class RankingRequestForm(messages.Message):
+    """RankingForm for inbound ranking request"""
+    number_of_results = messages.IntegerField(1)
+
 class RankingForm(messages.Message):
-    """RankingForm for outbound Rank information"""
+    """RankingForm for outbound ranking information"""
     user = messages.StringField(1, required=True)
     win_percent = messages.FloatField(2, required=True)
     cats_percent = messages.FloatField(3, required=True)
