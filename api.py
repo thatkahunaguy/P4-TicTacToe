@@ -65,16 +65,7 @@ class TicTacToeApi(remote.Service):
         if not user_x or not user_o:
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
-        # try:
         game = Game.new_game(user_x.key, user_o.key)
-        # except ValueError:
-        #     raise endpoints.BadRequestException('Maximum must be greater '
-        #                                         'than minimum!')
-
-        # Use a task queue to update the average attempts remaining.
-        # This operation is not needed to complete the creation of a new game
-        # so it is performed out of sequence.
-        # taskqueue.add(url='/tasks/cache_average_attempts')
         return game.to_form('Good luck playing Tic Tac Toe!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
@@ -85,10 +76,7 @@ class TicTacToeApi(remote.Service):
     def get_game(self, request):
         """Return the current game state."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        if game:
-            return game.to_form('Time to make a move!')
-        else:
-            raise endpoints.NotFoundException('Game not found!')
+        return game.to_form('Time to make a move!')
 
     @endpoints.method(request_message=MAKE_MOVE_REQUEST,
                       response_message=GameForm,
@@ -102,6 +90,9 @@ class TicTacToeApi(remote.Service):
             kind = "X"
         else:
             kind = "O"
+        if abs(request.move_x)>2 or (request.move_y)>2:
+            raise endpoints.BadRequestException(
+                'x & y coordinates must be 0, 1, or 2')
         move = Move(parent=game.key, kind=kind,
                     number=game.number_of_moves + 1,
                     x=request.move_x, y=request.move_y)
@@ -115,7 +106,10 @@ class TicTacToeApi(remote.Service):
                       http_method='GET')
     def get_moves(self, request):
         """Gets all moves for a particular game"""
-        game_key = ndb.Key(urlsafe=request.urlsafe_game_key)
+        try:
+            game_key = ndb.Key(urlsafe=request.urlsafe_game_key)
+        except:
+            raise endpoints.NotFoundException('Bad Key, Game not found!')
         moves = Move.query(ancestor=game_key).order(Move.number)
         return MoveForms(items=[move.to_form() for move in moves])
 
@@ -203,26 +197,6 @@ class TicTacToeApi(remote.Service):
         rankings = rank_them(users=users,
                             number_of_results=request.number_of_results)
         return RankingForms(items=[ranking.to_form() for ranking in rankings])
-
-    # @endpoints.method(response_message=StringMessage,
-    #                   path='games/average_attempts',
-    #                   name='get_average_attempts_remaining',
-    #                   http_method='GET')
-    # def get_average_attempts(self, request):
-    #     """Get the cached average moves remaining"""
-    #     return StringMessage(message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
-    #
-    # @staticmethod
-    # def _cache_average_attempts():
-    #     """Populates memcache with the average moves remaining of Games"""
-    #     games = Game.query(Game.game_over == False).fetch()
-    #     if games:
-    #         count = len(games)
-    #         total_attempts_remaining = sum([game.attempts_remaining
-    #                                     for game in games])
-    #         average = float(total_attempts_remaining)/count
-            # memcache.set(MEMCACHE_MOVES_REMAINING,
-            #              'The average moves remaining is {:.2f}'.format(average))
 
 
 api = endpoints.api_server([TicTacToeApi])

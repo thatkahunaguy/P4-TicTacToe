@@ -120,7 +120,7 @@ tiebreaker(fewer is better).
    - Description: Returns the list of user rankings from 1st place to
    number_of_results (or all if not provided).  Rankings are win/loss ratio
    with ties broken by cats game ratio with further ties broken by average
-   number of moves
+   number of moves.  Users who have not played a game are not ranked.
 
 - **cancel_game**
   - Path: 'game/cancel/{urlsafe_game_key}'

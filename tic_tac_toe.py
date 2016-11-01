@@ -15,13 +15,12 @@ def make_move_2(game, player, move):
     if not (player == whose_turn):
         return game.to_form(
             "Sorry, it is {}'s turn!".format(whose_turn))
-    game.number_of_moves += 1
     index = move.x + 3*move.y
     if game.board[index] == "0":
         # assign the move to the board
         end = game.board[index+1:]
-        if index == 9:
-            end = ""
+        # if index == 9:
+        #     end = ""
         game.board = game.board[:index] + move.kind + end
     else:
         # there is a already a move at this position, don't update game
@@ -29,6 +28,7 @@ def make_move_2(game, player, move):
                             .format(move.x, move.y))
     # commit the move to the database only after we know its valid
     move.put()
+    game.number_of_moves += 1
     # only check for game end if at least 5 moves have been made
     if game.number_of_moves > 4:
         if game_over(game, move):
@@ -104,11 +104,13 @@ def rank_them(users, number_of_results):
             else:
                 losses += 1.0
         games = wins + cats + losses
-        rating = Ranking(user=user.name,
+        # don't rank users who haven't finished a game
+        if games != 0:
+            rating = Ranking(user=user.name,
                          win_percent=wins/games,
                          cats_percent=cats/games,
                          avg_moves=moves/games)
-        rankings.append(rating)
+            rankings.append(rating)
     # sorts are stable(order from initial sort retained unless changed
     # by a later sort) so execute the last sort criteria first
     rankings = sorted(rankings, key=attrgetter('avg_moves'))
