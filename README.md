@@ -93,6 +93,16 @@ given time. Each game can be retrieved or played by using the path parameter
     - Description: Gets the average number of attempts remaining for all games
     from a previously cached memcache key.
 
+- **get_user_rankingst**
+   - Path: 'rankings
+   - Method: GET
+   - Parameters: number_of_results(optional)
+   - Returns: StringMessage
+   - Description: Returns the list of user rankings from 1st place to
+   number_of_results (or all if not provided).  Rankings are win/loss ratio
+   with ties broken by cats game ratio with further ties broken by average
+   number of moves
+
 ##Models Included:
  - **User**
     - Stores unique user_name, (optional) email address , & (optional)

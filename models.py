@@ -37,10 +37,8 @@ class Game(ndb.Model):
     whose_turn = ndb.KeyProperty(required=True, kind='User')
 
     @classmethod
-    def new_game(cls, user_name_x, user_name_o, min, max, attempts):
+    def new_game(cls, user_name_x, user_name_o):
         """Creates and returns a new game"""
-        if max < min:
-            raise ValueError('Maximum must be greater than minimum')
         game = Game(user_name_x=user_name_x,
                     user_name_o=user_name_o,
                     # target=random.choice(range(1, max + 1)),
@@ -104,6 +102,18 @@ class Score(ndb.Model):
                          won=self.won, cats=self.cats,
                          date=str(self.date), moves=self.moves)
 
+class Ranking(object):
+    """Ranking object"""
+    def __init__(self, user, win_percent, cats_percent, avg_moves):
+        self.user = user
+        self.win_percent = win_percent
+        self.cats_percent = cats_percent
+        self.avg_moves = avg_moves
+
+    def to_form(self):
+        return RankingForm(user=self.user, win_percent=self.win_percent,
+                           cats_percent=self.cats_percent,
+                           avg_moves=self.avg_moves)
 
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""
@@ -121,9 +131,6 @@ class NewGameForm(messages.Message):
     """Used to create a new game"""
     user_name_x = messages.StringField(1, required=True)
     user_name_o = messages.StringField(2, required=True)
-    min = messages.IntegerField(3, default=1)
-    max = messages.IntegerField(4, default=10)
-    attempts = messages.IntegerField(5, default=5)
 
 
 class MakeMoveForm(messages.Message):
@@ -161,6 +168,17 @@ class MoveForms(messages.Message):
 class GameForms(messages.Message):
     """Return multiple GameForms"""
     items = messages.MessageField(GameForm, 1, repeated=True)
+
+class RankingForm(messages.Message):
+    """RankingForm for outbound Rank information"""
+    user = messages.StringField(1, required=True)
+    win_percent = messages.FloatField(2, required=True)
+    cats_percent = messages.FloatField(3, required=True)
+    avg_moves = messages.FloatField(4, required=True)
+
+class RankingForms(messages.Message):
+    """Return multiple RankingForms"""
+    items = messages.MessageField(RankingForm, 1, repeated=True)
 
 class StringMessage(messages.Message):
     """StringMessage-- outbound (single) string message"""

@@ -11,10 +11,11 @@ from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
+from operator import attrgetter
 
-from models import User, Game, Score, Move
+from models import User, Game, Score, Move, Ranking
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, GameForms, MoveForm, MoveForms
+    ScoreForms, GameForms, MoveForm, MoveForms, RankingForm, RankingForms
 from utils import get_by_urlsafe
 from tic_tac_toe import make_move_2
 
@@ -63,12 +64,11 @@ class TicTacToeApi(remote.Service):
         if not user_x or not user_o:
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
-        try:
-            game = Game.new_game(user_x.key, user_o.key, request.min,
-                                 request.max, request.attempts)
-        except ValueError:
-            raise endpoints.BadRequestException('Maximum must be greater '
-                                                'than minimum!')
+        # try:
+        game = Game.new_game(user_x.key, user_o.key)
+        # except ValueError:
+        #     raise endpoints.BadRequestException('Maximum must be greater '
+        #                                         'than minimum!')
 
         # Use a task queue to update the average attempts remaining.
         # This operation is not needed to complete the creation of a new game
@@ -187,6 +187,43 @@ class TicTacToeApi(remote.Service):
             return game.to_form(
                 "Sorry, {} can't cancel this game".format(user.name))
 
+    @endpoints.method(response_message=RankingForms,
+                      path='ranking',
+                      name='get_rankings',
+                      http_method='GET')
+    def get_rankings(self, request):
+        """Returns rankings of players, all or up to number_of_results"""
+        users = User.query()
+        if not users:
+            raise endpoints.NotFoundException(
+                    'No users in the database yet!')
+        rankings = []
+        for user in users:
+            scores = Score.query(ancestor=user.key)
+            wins = losses = cats = moves = 0.0
+            for score in scores:
+                # chore: might not want to include moves in losses in the
+                # rankings algorithm
+                moves += score.moves
+                if score.won:
+                    wins += 1.0
+                elif score.cats:
+                    cats += 1.0
+                else:
+                    losses += 1.0
+            games = wins + cats + losses
+            rating = Ranking(user=user.name,
+                             win_percent=wins/games,
+                             cats_percent=cats/games,
+                             avg_moves=moves/games)
+            rankings.append(rating)
+        # sorts are stable(order from initial sort retained unless changed
+        # by a later sort) so execute the last sort criteria first
+        rankings = sorted(rankings, key=attrgetter('avg_moves'))
+        rankings = sorted(rankings, key=attrgetter('win_percent',
+                                                   'cats_percent'),
+                                                   reverse=True)
+        return RankingForms(items=[ranking.to_form() for ranking in rankings])
 
     # @endpoints.method(response_message=StringMessage,
     #                   path='games/average_attempts',
