@@ -33,6 +33,29 @@ class SendReminderEmail(webapp2.RequestHandler):
                                subject,
                                body)
 
+class NotifyOfTurn(webapp2.RequestHandler):
+    def get(self):
+        """Send a notification email when it's a users's turn"""
+        app_id = app_identity.get_application_id()
+        # if the user has an email send a reminder
+        user = user_key.get()
+        game = game_key.get()
+        if game.user_name_x == user_key:
+            opponent_key = game.user_name_o
+        else:
+            opponent_key = game.user_name_x
+        if user.email:
+            subject = "It's your turn!"
+            body = """Hello {}, it's your turn against {} after {} moves
+                      Come make a move!""".format(user.name,
+                                                  opponent_key.get().name,
+                                                  game.moves)
+            # This will send test emails, the arguments to send_mail are:
+            # from, to, subject, body
+            mail.send_mail('noreply@{}.appspotmail.com'.format(app_id),
+                           user.email,
+                           subject,
+                           body)
 
 # class UpdateAverageMovesRemaining(webapp2.RequestHandler):
 #     def post(self):
@@ -43,5 +66,5 @@ class SendReminderEmail(webapp2.RequestHandler):
 
 app = webapp2.WSGIApplication([
     ('/crons/send_reminder', SendReminderEmail)
-#    ('/tasks/cache_average_attempts', UpdateAverageMovesRemaining),
+#    ('/tasks/turn_notification', NotifyOfTurn),
 ], debug=True)

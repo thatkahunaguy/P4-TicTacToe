@@ -1,5 +1,6 @@
 """Tic Tac Toe game logic"""
 from operator import attrgetter
+from google.appengine.api import taskqueue
 
 from models import User, Game, Score, Ranking
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
@@ -45,6 +46,10 @@ def make_move_2(game, player, move):
     else:
         game.whose_turn = game.user_name_x
     game.put()
+    # notify the other player it is their turn
+    taskqueue.add(url='/tasks/turn_notification',
+                  params={'user_key': game.whose_turn,
+                          'game_key': game.key})
     return game.to_form("It's {}'s turn!".format(game.whose_turn.get().name))
 
 
