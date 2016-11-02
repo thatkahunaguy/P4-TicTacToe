@@ -52,7 +52,15 @@ def make_move_2(game, player, move):
     taskqueue.add(url='/tasks/turn_notification',
                   params={'user_key': game.whose_turn.urlsafe(),
                           'game_key': game.key.urlsafe()})
-    return game.to_form("It's {}'s turn!".format(game.whose_turn.get().name))
+    if game.game_over:
+        if game.cats:
+            string = "Cat's game!"
+        else:
+            string = "Game Over! {} wins!"
+    else:
+        string = "It's {}'s turn!"
+    return game.to_form(string.format(
+            game.whose_turn.get().name))
 
 
 def text_board_to_array(board):
