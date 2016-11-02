@@ -10,6 +10,7 @@ from google.appengine.ext import ndb
 
 from api import TicTacToeApi
 from models import User, Game
+from utils import get_by_urlsafe
 
 
 class SendReminderEmail(webapp2.RequestHandler):
@@ -34,12 +35,17 @@ class SendReminderEmail(webapp2.RequestHandler):
                                body)
 
 class NotifyOfTurn(webapp2.RequestHandler):
-    def get(self):
+    # chore: confirm if post is the required url access for a task vs
+    # get for a cron?
+    def post(self):
         """Send a notification email when it's a users's turn"""
         app_id = app_identity.get_application_id()
         # if the user has an email send a reminder
-        user = user_key.get()
-        game = game_key.get()
+        # keys extracted are urlsafe
+        user_key = self.request.get('user_key')
+        user = get_by_urlsafe(user_key, User)
+        game_key = self.request.get('game_key')
+        game = get_by_urlsafe(game_key, Game)
         if game.user_name_x == user_key:
             opponent_key = game.user_name_o
         else:
@@ -49,7 +55,7 @@ class NotifyOfTurn(webapp2.RequestHandler):
             body = """Hello {}, it's your turn against {} after {} moves
                       Come make a move!""".format(user.name,
                                                   opponent_key.get().name,
-                                                  game.moves)
+                                                  game.number_of_moves)
             # This will send test emails, the arguments to send_mail are:
             # from, to, subject, body
             mail.send_mail('noreply@{}.appspotmail.com'.format(app_id),
@@ -65,6 +71,6 @@ class NotifyOfTurn(webapp2.RequestHandler):
 
 
 app = webapp2.WSGIApplication([
-    ('/crons/send_reminder', SendReminderEmail)
-#    ('/tasks/turn_notification', NotifyOfTurn),
+    ('/crons/send_reminder', SendReminderEmail),
+    ('/tasks/turn_notification', NotifyOfTurn),
 ], debug=True)

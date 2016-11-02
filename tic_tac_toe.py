@@ -33,12 +33,13 @@ def make_move_2(game, player, move):
     if game.number_of_moves > 4:
         if game_over(game, move):
             game.end_game(True)
-            game.put()
+            # move to game.end_game game.put()
             return game.to_form('{} wins!'.format(whose_turn))
     #check for cats game chore: make this more robust
     if game.number_of_moves == 9:
-        game.cats = True
-        game.put()
+        # move to game.end_game game.cats = True
+        game.end_game(False)
+        # move to game.end_game game.put()
         return game.to_form('Cats game!')
     # update whose_turn it is
     if game.whose_turn == game.user_name_x:
@@ -47,9 +48,10 @@ def make_move_2(game, player, move):
         game.whose_turn = game.user_name_x
     game.put()
     # notify the other player it is their turn
+    # note keys must be made urlsafe since they are passed in url
     taskqueue.add(url='/tasks/turn_notification',
-                  params={'user_key': game.whose_turn,
-                          'game_key': game.key})
+                  params={'user_key': game.whose_turn.urlsafe(),
+                          'game_key': game.key.urlsafe()})
     return game.to_form("It's {}'s turn!".format(game.whose_turn.get().name))
 
 
