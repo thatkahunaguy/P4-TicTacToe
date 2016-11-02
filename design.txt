@@ -1,0 +1,27 @@
+Design decision summary for Udacity Full Stack P4 Design a Game: tic_tac_toe
+
+Models Added:
+    - Score: This model was created to store the key score information for
+        each user after every game ends.  Each score has the respective user
+        as the parent to allow for easy retrieval.
+    - Move: This model was created to keep track of every move made in every
+        game so that all moves can be reviewed.  Each move has the game as
+        a parent to allow easy retrieval.
+    - Ranking: I wanted an object to keep track of the key information for
+        each user used in the ranking algorithm.  For example, the win & cats
+        game percentages and average number of moves for each user.
+
+Some Design Struggles/Decisions:
+    - The Score Model:  I struggled a bit with the decision
+        to store a score for each user after a game ends rather
+        than a single score for the game which already stores who the Players
+        are.  I decided to go this way as it makes querying simpler and
+        requires less entity queries overall to retrieve the information.
+        However, there is a tradeoff in terms of additional DB storage.
+    - Board State & Game Over Checks: I decided to store the board state
+        as a 9 character text string but do the game over checks on a
+        numerical array.  This requires converting between the two.  I could
+        also have stored "winning" text strings and done a state comparison
+        against these to determine if the game was over.  In practice I would
+        probably profile the different options if performance, latency, and
+        and cloud cost were an issue with the solution chosen.
