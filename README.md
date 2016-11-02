@@ -129,6 +129,10 @@ tiebreaker(fewer is better).
   - Returns: GameForm.
   - Description: Cancels the specified game and returns the final game state.
 
+ - **get_high_scores**
+  NOTE: per the instructions this endppoint was not implemented since this is
+  a 2 player game
+
 ##Models Included:
  - **User**
     - Stores unique user_name, (optional) email address , & (optional)
