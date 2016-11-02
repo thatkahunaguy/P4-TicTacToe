@@ -49,6 +49,8 @@ def make_move_2(game, player, move):
     game.put()
     # notify the other player it is their turn
     # note keys must be made urlsafe since they are passed in url
+    # chore: update taskqueue call to pass needed info vs keys to
+    # reduce datastore queries
     taskqueue.add(url='/tasks/turn_notification',
                   params={'user_key': game.whose_turn.urlsafe(),
                           'game_key': game.key.urlsafe()})

@@ -17,6 +17,7 @@ class Move(ndb.Model):
     """Move object"""
     kind = ndb.StringProperty(required=True, default="X", choices=["X", "O"])
     # chore: add a validator to x & y to ensure they are between 0 & 2
+    # validated input in the endpoint, could still add here
     x = ndb.IntegerProperty(required=True)
     y = ndb.IntegerProperty(required=True)
     number = ndb.IntegerProperty(required=True)
@@ -27,10 +28,8 @@ class Move(ndb.Model):
 
 class Game(ndb.Model):
     """Game object"""
-    # target = ndb.IntegerProperty(required=True)
     number_of_moves = ndb.IntegerProperty(required=True, default = 0)
     board = ndb.StringProperty(required=True, default = "000000000")
-    # attempts_remaining = ndb.IntegerProperty(required=True, default=5)
     game_over = ndb.BooleanProperty(required=True, default=False)
     user_name_x = ndb.KeyProperty(required=True, kind='User')
     user_name_o = ndb.KeyProperty(required=True, kind='User')
@@ -41,8 +40,6 @@ class Game(ndb.Model):
         """Creates and returns a new game"""
         game = Game(user_name_x=user_name_x,
                     user_name_o=user_name_o,
-                    # target=random.choice(range(1, max + 1)),
-                    # attempts_allowed=attempts,
                     number_of_moves=0,
                     whose_turn=user_name_x,
                     game_over=False)
@@ -55,7 +52,6 @@ class Game(ndb.Model):
         form.urlsafe_key = self.key.urlsafe()
         form.user_name_x = self.user_name_x.get().name
         form.user_name_o = self.user_name_o.get().name
-#        form.attempts_remaining = self.attempts_remaining
         form.whose_turn = self.whose_turn.get().name
         form.game_over = self.game_over
         form.message = message
@@ -69,12 +65,13 @@ class Game(ndb.Model):
         """Ends the game - if won is True, the current player won. - if won is
         False, it was a cats game."""
         self.game_over = True
-        self.put()
         if (self.whose_turn == self.user_name_x):
             not_turn = self.user_name_o
         else:
             not_turn = self.user_name_x
         cats = not won
+        self.cats = cats
+        self.put()
         # Add the winners score or cats score
         score = Score(parent=self.whose_turn, opponent=not_turn,
                       date=datetime.today(), won=won, cats=cats,
@@ -89,7 +86,6 @@ class Game(ndb.Model):
 
 class Score(ndb.Model):
     """Score object"""
-    #user = ndb.KeyProperty(required=True, kind='User')
     opponent = ndb.KeyProperty(required=True, kind='User')
     date = ndb.DateTimeProperty(required=True)
     won = ndb.BooleanProperty(required=True)
@@ -147,6 +143,7 @@ class ScoreForm(messages.Message):
     date = messages.StringField(3, required=True)
     won = messages.BooleanField(4, required=True)
     cats = messages.BooleanField(5, required=True)
+    # number of moves
     moves = messages.IntegerField(6, required=True)
 
 
@@ -156,6 +153,7 @@ class ScoreForms(messages.Message):
 
 class MoveForm(messages.Message):
     """MoveForm for outbound Move information"""
+    # x or y
     kind = messages.StringField(1, required=True)
     x = messages.IntegerField(2, required=True)
     y = messages.IntegerField(3, required=True)

@@ -35,8 +35,6 @@ class SendReminderEmail(webapp2.RequestHandler):
                                body)
 
 class NotifyOfTurn(webapp2.RequestHandler):
-    # chore: confirm if post is the required url access for a task vs
-    # get for a cron?
     def post(self):
         """Send a notification email when it's a users's turn"""
         app_id = app_identity.get_application_id()
@@ -46,14 +44,14 @@ class NotifyOfTurn(webapp2.RequestHandler):
         user = get_by_urlsafe(user_key, User)
         game_key = self.request.get('game_key')
         game = get_by_urlsafe(game_key, Game)
-        if game.user_name_x == user_key:
+        if game.user_name_x == user.key:
             opponent_key = game.user_name_o
         else:
             opponent_key = game.user_name_x
         if user.email:
             subject = "It's your turn!"
-            body = """Hello {}, it's your turn against {} after {} moves
-                      Come make a move!""".format(user.name,
+            body = ("Hello {}, it's your turn against {} after {} moves! "
+                    "Come back & make a move!").format(user.name,
                                                   opponent_key.get().name,
                                                   game.number_of_moves)
             # This will send test emails, the arguments to send_mail are:
@@ -62,12 +60,6 @@ class NotifyOfTurn(webapp2.RequestHandler):
                            user.email,
                            subject,
                            body)
-
-# class UpdateAverageMovesRemaining(webapp2.RequestHandler):
-#     def post(self):
-#         """Update game listing announcement in memcache."""
-#         TicTacToeApi._cache_average_attempts()
-#         self.response.set_status(204)
 
 
 app = webapp2.WSGIApplication([

@@ -148,7 +148,7 @@ class TicTacToeApi(remote.Service):
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
         user = user.key
-        # chore: figure out why I don't have to call fetch on they
+        # chore: figure out why I don't have to call fetch on the
         # queries for games and scores above - thought this just
         # built a query object and didn't actually query the database
         # without .fetch() or .get() - see the link below...when used
