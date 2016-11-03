@@ -7,18 +7,38 @@ primarily with communication to/from the API's users."""
 
 import logging
 import endpoints
-from protorpc import remote, messages
-from google.appengine.api import memcache
-from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
-from operator import attrgetter
-
-from models import User, Game, Score, Move, Ranking
-from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, GameForms, MoveForm, MoveForms, RankingForm, RankingForms,\
-    RankingRequestForm
 from utils import get_by_urlsafe
-from tic_tac_toe import make_move_2, rank_them
+from protorpc import (
+    remote,
+    messages,
+)
+from google.appengine.api import (
+    memcache,
+    taskqueue,
+)
+from models import (
+    User,
+    Game,
+    Score,
+    Move,
+    Ranking,
+    StringMessage,
+    NewGameForm,
+    GameForm,
+    MakeMoveForm,
+    ScoreForms,
+    GameForms,
+    MoveForm,
+    MoveForms,
+    RankingForm,
+    RankingForms,
+    RankingRequestForm,
+)
+from tic_tac_toe import (
+    make_move_2,
+    rank_them,
+)
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
 GET_GAME_REQUEST = endpoints.ResourceContainer(
@@ -86,11 +106,13 @@ class TicTacToeApi(remote.Service):
     def make_move(self, request):
         """Makes a move. Returns a game state with message"""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        if game.whose_turn == game.user_name_x:
-            kind = "X"
-        else:
-            kind = "O"
-        if abs(request.move_x)>2 or (request.move_y)>2:
+        kind = "X" if game.whose_turn == game.user_name_x else "O"
+        # if game.whose_turn == game.user_name_x:
+        #     kind = "X"
+        # else:
+        #     kind = "O"
+        # if abs(request.move_x)>2 or (request.move_y)>2:
+        if request.move_x not in range(3) or request.move_y not in range(3):
             raise endpoints.BadRequestException(
                 'x & y coordinates must be 0, 1, or 2')
         move = Move(parent=game.key, kind=kind,

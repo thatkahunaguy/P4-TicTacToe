@@ -1,8 +1,8 @@
 """models.py - This file contains the class definitions for the Datastore
-entities used by the Game. Because these classes are also regular Python
-classes they can include methods (such as 'to_form' and 'new_game')."""
+entities and regular objects used by the Tic Tac Toe. Helper methods like
+'to_form', 'new_game', & 'end_game' are used to support RPC messaging and
+Datastore operations on the entities"""
 
-import random
 from datetime import datetime
 from protorpc import messages
 from google.appengine.ext import ndb
@@ -21,10 +21,11 @@ class Move(ndb.Model):
     x = ndb.IntegerProperty(required=True)
     y = ndb.IntegerProperty(required=True)
     number = ndb.IntegerProperty(required=True)
+    board = ndb.StringProperty()
 
     def to_form(self):
         return MoveForm(kind=self.kind, x=self.x, y=self.y,
-                        number = self.number)
+                        number=self.number, board=self.board)
 
 class Game(ndb.Model):
     """Game object"""
@@ -158,6 +159,7 @@ class MoveForm(messages.Message):
     x = messages.IntegerField(2, required=True)
     y = messages.IntegerField(3, required=True)
     number = messages.IntegerField(4, required=True)
+    board = messages.StringField(5, required=True)
 
 class MoveForms(messages.Message):
     """Return multiple MoveForms"""

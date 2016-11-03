@@ -102,7 +102,8 @@ tiebreaker(fewer is better).
    - Method: GET
    - Parameters: urlsafe_game_key
    - Returns: MoveForms.
-   - Description: Returns all moves in the game in the order played.
+   - Description: Returns all moves in the game in the order played along with
+   the game state of the board.
 
  - **get_active_game_count**
     - Path: 'games/active'

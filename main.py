@@ -22,7 +22,7 @@ class SendReminderEmail(webapp2.RequestHandler):
         for user in users:
             games = Game.query(Game.game_over == False,
                                ndb.OR(Game.user_name_x == user.key,
-                                      Game.user_name_o == user.key))
+                                      Game.user_name_o == user.key)).fetch()
             if games:
                 subject = 'You have a game in progress'
                 body = """Hello {}, you still have a game in progress!

@@ -27,6 +27,7 @@ def make_move_2(game, player, move):
         return game.to_form("""Sorry, position {}, {} is already filled!"""
                             .format(move.x, move.y))
     # commit the move to the database only after we know its valid
+    move.board = game.board
     move.put()
     game.number_of_moves += 1
     # only check for game end if at least 5 moves have been made
