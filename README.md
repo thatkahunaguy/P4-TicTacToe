@@ -103,7 +103,7 @@ tiebreaker(fewer is better).
    - Parameters: urlsafe_game_key
    - Returns: MoveForms.
    - Description: Returns all moves in the game in the order played along with
-   the game state of the board.
+   the game state after the move has been made(board state and status string)
 
  - **get_active_game_count**
     - Path: 'games/active'
@@ -134,6 +134,16 @@ tiebreaker(fewer is better).
   NOTE: per the instructions this endppoint was not implemented since this is
   a 2 player game
 
+##Crons Included:
+ - **SendReminderEmail**
+    - Sends a reminder to users with a game in progress at midnight daily
+
+##TaskQueues Included:
+ - **NotifyOfTurn**
+    - Sends an email notification when it is a users turn
+
+##Reviewer feedback to drop Model & Form info since its not needed for an api
+##user
 ##Models Included:
  - **User**
     - Stores unique user_name, (optional) email address , & (optional)
