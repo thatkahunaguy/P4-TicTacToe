@@ -17,6 +17,8 @@ handlers:
 
 - url: /crons/send_reminder
   script: main.app
+  # restrict access to the url to scheduled jobs with login:admin
+  login: admin
 
 libraries:
 - name: webapp2

@@ -5,11 +5,16 @@ cronjobs."""
 import logging
 
 import webapp2
-from google.appengine.api import mail, app_identity
 from google.appengine.ext import ndb
+from google.appengine.api import (
+    mail,
+    app_identity,
+)
 
-from api import TicTacToeApi
-from models import User, Game
+from models import (
+    User,
+    Game,
+)
 from utils import get_by_urlsafe
 
 
@@ -34,6 +39,7 @@ class SendReminderEmail(webapp2.RequestHandler):
                                subject,
                                body)
 
+
 class NotifyOfTurn(webapp2.RequestHandler):
     def post(self):
         """Send a notification email when it's a users's turn"""
@@ -52,8 +58,8 @@ class NotifyOfTurn(webapp2.RequestHandler):
             subject = "It's your turn!"
             body = ("Hello {}, it's your turn against {} after {} moves! "
                     "Come back & make a move!").format(user.name,
-                                                  opponent_key.get().name,
-                                                  game.number_of_moves)
+                                                       opponent_key.get().name,
+                                                       game.number_of_moves)
             # This will send test emails, the arguments to send_mail are:
             # from, to, subject, body
             mail.send_mail('noreply@{}.appspotmail.com'.format(app_id),

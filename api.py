@@ -217,7 +217,7 @@ class TicTacToeApi(remote.Service):
                     'No users in the database yet!')
         rankings = []
         rankings = rank_them(users=users,
-                            number_of_results=request.number_of_results)
+                             number_of_results=request.number_of_results)
         return RankingForms(items=[ranking.to_form() for ranking in rankings])
 
 

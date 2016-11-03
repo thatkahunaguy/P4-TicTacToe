@@ -13,6 +13,7 @@ class User(ndb.Model):
     name = ndb.StringProperty(required=True)
     email = ndb.StringProperty()
 
+
 class Move(ndb.Model):
     """Move object"""
     kind = ndb.StringProperty(required=True, default="X", choices=["X", "O"])
@@ -22,15 +23,18 @@ class Move(ndb.Model):
     y = ndb.IntegerProperty(required=True)
     number = ndb.IntegerProperty(required=True)
     board = ndb.StringProperty()
+    status = ndb.StringProperty()
 
     def to_form(self):
         return MoveForm(kind=self.kind, x=self.x, y=self.y,
-                        number=self.number, board=self.board)
+                        number=self.number, board=self.board,
+                        status=self.status)
+
 
 class Game(ndb.Model):
     """Game object"""
-    number_of_moves = ndb.IntegerProperty(required=True, default = 0)
-    board = ndb.StringProperty(required=True, default = "000000000")
+    number_of_moves = ndb.IntegerProperty(required=True, default=0)
+    board = ndb.StringProperty(required=True, default="000000000")
     game_over = ndb.BooleanProperty(required=True, default=False)
     user_name_x = ndb.KeyProperty(required=True, kind='User')
     user_name_o = ndb.KeyProperty(required=True, kind='User')
@@ -80,7 +84,7 @@ class Game(ndb.Model):
         score.put()
         # Add the losers score or cats score
         score = Score(parent=not_turn, opponent=self.whose_turn,
-                      date=datetime.today(), won= False, cats=cats,
+                      date=datetime.today(), won=False, cats=cats,
                       moves=self.number_of_moves)
         score.put()
 
@@ -99,6 +103,7 @@ class Score(ndb.Model):
                          won=self.won, cats=self.cats,
                          date=str(self.date), moves=self.moves)
 
+
 class Ranking(object):
     """Ranking object"""
     def __init__(self, user, win_percent, cats_percent, avg_moves):
@@ -111,6 +116,7 @@ class Ranking(object):
         return RankingForm(user=self.user, win_percent=self.win_percent,
                            cats_percent=self.cats_percent,
                            avg_moves=self.avg_moves)
+
 
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""
@@ -152,6 +158,7 @@ class ScoreForms(messages.Message):
     """Return multiple ScoreForms"""
     items = messages.MessageField(ScoreForm, 1, repeated=True)
 
+
 class MoveForm(messages.Message):
     """MoveForm for outbound Move information"""
     # x or y
@@ -160,18 +167,23 @@ class MoveForm(messages.Message):
     y = messages.IntegerField(3, required=True)
     number = messages.IntegerField(4, required=True)
     board = messages.StringField(5, required=True)
+    status = messages.StringField(6, required=True)
+
 
 class MoveForms(messages.Message):
     """Return multiple MoveForms"""
     items = messages.MessageField(MoveForm, 1, repeated=True)
 
+
 class GameForms(messages.Message):
     """Return multiple GameForms"""
     items = messages.MessageField(GameForm, 1, repeated=True)
 
+
 class RankingRequestForm(messages.Message):
     """RankingForm for inbound ranking request"""
     number_of_results = messages.IntegerField(1)
+
 
 class RankingForm(messages.Message):
     """RankingForm for outbound ranking information"""
@@ -180,9 +192,11 @@ class RankingForm(messages.Message):
     cats_percent = messages.FloatField(3, required=True)
     avg_moves = messages.FloatField(4, required=True)
 
+
 class RankingForms(messages.Message):
     """Return multiple RankingForms"""
     items = messages.MessageField(RankingForm, 1, repeated=True)
+
 
 class StringMessage(messages.Message):
     """StringMessage-- outbound (single) string message"""

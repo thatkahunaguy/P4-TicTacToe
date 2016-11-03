@@ -2,9 +2,10 @@
 from operator import attrgetter
 from google.appengine.api import taskqueue
 
-from models import User, Game, Score, Ranking
-from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms
+from models import (
+    Score,
+    Ranking,
+)
 
 
 def make_move_2(game, player, move):
@@ -19,29 +20,26 @@ def make_move_2(game, player, move):
     if game.board[index] == "0":
         # assign the move to the board
         end = game.board[index+1:]
-        # if index == 9:
-        #     end = ""
         game.board = game.board[:index] + move.kind + end
     else:
         # there is a already a move at this position, don't update game
         return game.to_form("""Sorry, position {}, {} is already filled!"""
                             .format(move.x, move.y))
-    # commit the move to the database only after we know its valid
-    move.board = game.board
-    move.put()
+    # commit the move only after we know its valid
     game.number_of_moves += 1
     # only check for game end if at least 5 moves have been made
     if game.number_of_moves > 4:
         if game_over(game, move):
             game.end_game(True)
-            # move to game.end_game game.put()
-            return game.to_form('{} wins!'.format(whose_turn))
-    #check for cats game chore: make this more robust
+            string = '{} wins!'.format(whose_turn)
+            move_update(move, game.board, string)
+            return game.to_form(string)
+    # check for cats game chore: make this more robust
     if game.number_of_moves == 9:
-        # move to game.end_game game.cats = True
         game.end_game(False)
-        # move to game.end_game game.put()
-        return game.to_form('Cats game!')
+        string = 'Cats game!'
+        move_update(move, game.board, string)
+        return game.to_form(string)
     # update whose_turn it is
     if game.whose_turn == game.user_name_x:
         game.whose_turn = game.user_name_o
@@ -55,15 +53,16 @@ def make_move_2(game, player, move):
     taskqueue.add(url='/tasks/turn_notification',
                   params={'user_key': game.whose_turn.urlsafe(),
                           'game_key': game.key.urlsafe()})
-    if game.game_over:
-        if game.cats:
-            string = "Cat's game!"
-        else:
-            string = "Game Over! {} wins!"
-    else:
-        string = "It's {}'s turn!"
-    return game.to_form(string.format(
-            game.whose_turn.get().name))
+    string = "It's {}'s turn!".format(game.whose_turn.get().name)
+    move_update(move, game.board, string)
+    return game.to_form(string)
+
+
+def move_update(move, board, string):
+    move.board = board
+    move.status = string
+    move.put()
+    return move
 
 
 def text_board_to_array(board):
@@ -101,6 +100,7 @@ def game_over(game, move):
     else:
         return False
 
+
 def rank_them(users, number_of_results):
     rankings = []
     for user in users:
@@ -120,16 +120,16 @@ def rank_them(users, number_of_results):
         # don't rank users who haven't finished a game
         if games != 0:
             rating = Ranking(user=user.name,
-                         win_percent=wins/games,
-                         cats_percent=cats/games,
-                         avg_moves=moves/games)
+                             win_percent=wins/games,
+                             cats_percent=cats/games,
+                             avg_moves=moves/games)
             rankings.append(rating)
     # sorts are stable(order from initial sort retained unless changed
     # by a later sort) so execute the last sort criteria first
     rankings = sorted(rankings, key=attrgetter('avg_moves'))
     rankings = sorted(rankings, key=attrgetter('win_percent',
                                                'cats_percent'),
-                                               reverse=True)
+                      reverse=True)
     if number_of_results:
         rankings = rankings[:number_of_results]
     return rankings
